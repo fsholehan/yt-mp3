@@ -11,6 +11,8 @@ function View() {
   const [video, setVideo] = useState([]);
   const [loading, setLoading] = useState(false);
   const [audio, setAudio] = useState("");
+  const [lyric, setLyric] = useState({});
+  const [error, setError] = useState("");
 
   const getVideo = async () => {
     try {
@@ -26,21 +28,43 @@ function View() {
     }
   };
 
-  const audioUrl = async () => {
-    try {
-      const response = await axios.get(
-        `https://youtube-mp3-fns.herokuapp.com/api/v1/music/?videoId=${id}`
-      );
-      console.log(response.data);
-      setAudio(response?.data[0].url);
-    } catch (error) {
-      console.log(error.message);
-    }
-  };
+  useEffect(() => {
+    const getLyric = async () => {
+      try {
+        const response = await axios.get(
+          `https://youtube-mp3-fns.herokuapp.com/api/v1/lyric/?title=${video?.snippet?.title}`
+        );
+        console.log(response?.data);
+        if (
+          Object.prototype.toString.call(response?.data?.data) ===
+            "[object Object]" &&
+          JSON.stringify(response?.data?.data) === "{}"
+        ) {
+          return setError("Lyric not found");
+        }
+        setLyric(response?.data);
+      } catch (error) {
+        console.log(error.message);
+      }
+    };
+    getLyric();
+  }, [video?.snippet?.title]);
 
   useEffect(() => {
+    const audioUrl = async () => {
+      try {
+        const response = await axios.get(
+          `https://youtube-mp3-fns.herokuapp.com/api/v1/music/?videoId=${id}`
+        );
+        // console.log(response.data);
+        setAudio(response?.data[0].url);
+      } catch (error) {
+        console.log(error.message);
+      }
+    };
+
     audioUrl();
-  }, [video.id]);
+  }, [id]);
 
   const seconds = moment.duration(video?.contentDetails?.duration).asSeconds();
   const _duration = moment.utc(seconds * 1000).format("mm:ss");
@@ -109,7 +133,7 @@ function View() {
             <ReactAudioPlayer src={`${audio}`} controls className="mt-2" />
             <h2 className="text-gray-900 text-lg font-semibold mt-5">Lirik</h2>
             <p style={{ whiteSpace: "pre-line" }} className="mt-5">
-              {video?.snippet?.description}
+              {lyric.data ? lyric.data : error}
             </p>
           </>
         ) : (
